@@ -1,4 +1,3 @@
-// Variables de estado para la búsqueda automática
 let isSearching = false;
 let shouldStop = false;
 let profilesFound = [];
@@ -40,46 +39,87 @@ chrome.downloads.onChanged.addListener(function(downloadDelta) {
   }
 });
 
-// Manejo de mensajes entre contenido y background
+// Parte de background.js que maneja la solicitud a Supabase
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  console.log("Mensaje recibido en background:", request);
-  
-  if (request.action === "saveToLocal") {
-    console.log("Guardando datos localmente");
-    chrome.storage.local.set({lastSaved: new Date().toISOString()}, function() {
-      if (chrome.runtime.lastError) {
-        console.error("Error al guardar:", chrome.runtime.lastError);
-        sendResponse({success: false, error: chrome.runtime.lastError});
-      } else {
-        console.log("Datos guardados correctamente");
-        sendResponse({success: true});
-      }
-    });
-    return true;  // Indica que la respuesta será asincrónica
-  }
-  else if (request.action === "startSearch") {
-    if (!isSearching) {
-      isSearching = true;
-      shouldStop = false;
-      profilesFound = [];
-      currentProfileIndex = 0;
-      maxProfiles = request.maxProfiles || 10;
-      
-      // Comenzar la búsqueda
-      startSearchProcess(request.searchUrl);
-      sendResponse({success: true});
-    } else {
-      sendResponse({success: false, error: "Ya hay una búsqueda en progreso"});
+  if (request.action === "sendToSupabase") {
+    console.log('Background: Recibida solicitud para enviar a Supabase', request);
+    
+    // URL y token
+    const supabaseUrl = request.url || 'https://qiqxywhaggmjrbtvkanm.supabase.co/functions/v1/generate-embedding';
+    const supabaseToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcXh5d2hhZ2dtanJidHZrYW5tIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDY1OTYwMywiZXhwIjoyMDYwMjM1NjAzfQ.VFY-werwsPl7QVJJBWqwuELQZFND5uWEY70MJ5D_WeY';
+    
+    // Validar que el payload tenga una estructura correcta y que exista el campo obligatorio summary
+    if (!request.payload) {
+      console.error('Background: Payload incorrecto');
+      sendResponse({ 
+        success: false, 
+        error: 'Estructura de datos incorrecta.'
+      });
+      return true;
     }
-    return true;
-  }
-  else if (request.action === "stopSearch") {
-    shouldStop = true;
-    isSearching = false;
-    sendResponse({success: true});
-    return true;
+    
+    // Verificar si existe el campo summary
+    if (!request.payload.summary) {
+      console.warn('Background: Campo summary faltante, agregando valor por defecto');
+      request.payload.summary = "Sin información de resumen disponible";
+    }
+    
+    console.log('Background: Enviando payload a Supabase:', JSON.stringify(request.payload, null, 2));
+    
+    // Realizar solicitud a Supabase desde el background script
+    fetch(supabaseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcXh5d2hhZ2dtanJidHZrYW5tIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDY1OTYwMywiZXhwIjoyMDYwMjM1NjAzfQ.VFY-werwsPl7QVJJBWqwuELQZFND5uWEY70MJ5D_WeY'
+      },
+      body: JSON.stringify(request.payload)
+    })
+    .then(response => {
+      console.log('Background: Status de respuesta:', response.status);
+      return response.text();
+    })
+    .then(data => {
+      console.log('Background: Respuesta recibida:', data);
+      
+      try {
+        // Intentar parsear como JSON
+        const jsonData = JSON.parse(data);
+        if (jsonData.error || (jsonData.code && jsonData.code >= 400)) {
+          // Si hay un código de error
+          console.error('Background: Error en respuesta JSON:', jsonData);
+          sendResponse({ 
+            success: false, 
+            error: jsonData.error || jsonData.message || 'Error de servidor' 
+          });
+        } else {
+          // Si es exitoso
+          console.log('Background: Respuesta exitosa:', jsonData);
+          sendResponse({ success: true, data: data });
+        }
+      } catch (e) {
+        // Si no es JSON válido pero no hay error (posible respuesta sin contenido)
+        if (data === '' || data.trim() === '') {
+          console.log('Background: Respuesta vacía, asumiendo éxito');
+          sendResponse({ success: true, data: 'OK' });
+        } else {
+          console.log('Background: Respuesta no es JSON válido:', data);
+          sendResponse({ success: false, error: 'Respuesta no válida del servidor' });
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Background: Error al enviar datos:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    
+    return true; // Indica que la respuesta se enviará de forma asíncrona
   }
 });
+
+// Mensaje para confirmar que el background script está activo
+console.log('LinkedIn Profile Scraper: Background script cargado');
 
 // Función principal para iniciar el proceso de búsqueda
 function startSearchProcess(searchUrl) {

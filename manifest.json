@@ -3,8 +3,8 @@
   "name": "LinkedIn Profile Scraper Local",
   "version": "1.0",
   "description": "Extrae información de perfiles de LinkedIn de manera local",
-  "permissions": ["storage", "activeTab", "scripting", "downloads", "tabs", "webNavigation"],
-  "host_permissions": ["*://*.linkedin.com/*", "http://localhost:*/*","http://127.0.0.1:*/*"],  
+  "permissions": ["storage", "activeTab", "scripting", "downloads", "tabs", "webNavigation","https://qiqxywhaggmjrbtvkanm.supabase.co/*"],
+  "host_permissions": ["*://*.linkedin.com/*", "http://localhost:*/*","http://127.0.0.1:*/*","https://qiqxywhaggmjrbtvkanm.supabase.co/*" ],  
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
