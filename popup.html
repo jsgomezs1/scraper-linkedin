@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>LinkedIn Profile Scraper Local</title>
+  <style>
+    body {
+      width: 380px;
+      padding: 10px;
+      font-family: Arial, sans-serif;
+    }
+    button {
+      background-color: #0077b5;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    button:hover {
+      background-color: #006097;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #333;
+    }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    #status {
+      margin-top: 10px;
+      color: #666;
+    }
+    #progressBar {
+      width: 100%;
+      background-color: #f1f1f1;
+      border-radius: 4px;
+      margin-top: 10px;
+      display: none;
+    }
+    #progressBar > div {
+      height: 20px;
+      background-color: #4CAF50;
+      border-radius: 4px;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+    }
+    #profileData {
+      margin-top: 10px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      display: none;
+    }
+    .data-row {
+      margin-bottom: 8px;
+    }
+    .label {
+      font-weight: bold;
+    }
+    #exportBtn {
+      background-color: #4CAF50;
+      margin-top: 10px;
+      display: none;
+    }
+    #clearBtn {
+      background-color: #f44336;
+    }
+    #backupBtn {
+      background-color: #ff9800;
+    }
+    #restoreBtn {
+      background-color: #9c27b0;
+    }
+    #searchBtn {
+      background-color: #2196F3;
+    }
+    #stopBtn {
+      background-color: #f44336;
+      display: none;
+    }
+    #sendToSheetsBtn {
+      background-color: #0F9D58;
+      display: none;
+    }
+    #saveSettingsBtn, #saveConfigBtn {
+      background-color: #4285F4;
+      margin-top: 10px;
+    }
+    .mode-badge {
+      display: inline-block;
+      background-color: #333;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      margin-left: 8px;
+    }
+    .tab-container {
+      margin-bottom: 15px;
+    }
+    .tab {
+      overflow: hidden;
+      border: 1px solid #ccc;
+      background-color: #f1f1f1;
+      border-radius: 4px 4px 0 0;
+    }
+    .tab button {
+      background-color: inherit;
+      float: left;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 10px 16px;
+      transition: 0.3s;
+      width: auto;
+      margin: 0;
+      border-radius: 0;
+      color: #333;
+    }
+    .tab button:hover {
+      background-color: #ddd;
+    }
+    .tab button.active {
+      background-color: #0077b5;
+      color: white;
+    }
+    .tabcontent {
+      display: none;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 4px 4px;
+    }
+    footer {
+      margin-top: 15px;
+      font-size: 11px;
+      color: #999;
+      text-align: center;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+    }
+    .info-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+    .settings-section {
+      border-top: 1px solid #eee;
+      margin-top: 15px;
+      padding-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <h2>LinkedIn Profile Scraper <span class="mode-badge">LOCAL</span></h2>
+  
+  <div class="tab-container">
+    <div class="tab">
+      <button class="tablinks active" onclick="openTab(event, 'manualTab')">Manual</button>
+      <button class="tablinks" onclick="openTab(event, 'autoTab')">Automatico</button>
+      <button class="tablinks" onclick="openTab(event, 'dataTab')">Datos</button>
+      <button class="tablinks" onclick="openTab(event, 'configTab')">Config</button>
+    </div>
+    
+    <!-- Pestaña de extracción manual -->
+    <div id="manualTab" class="tabcontent" style="display: block;">
+      <p>Extrae informacion del perfil actual de LinkedIn que estas visitando.</p>
+      <button id="scrapeBtn">Extraer Perfil Actual</button>
+      <button id="sendToSheetsBtn">Enviar a Base de datos</button>
+      <div id="profileData"></div>
+    </div>
+    
+    <!-- Pestaña de búsqueda automática -->
+    <div id="autoTab" class="tabcontent">
+      <div class="input-group">
+        <label for="searchQuery">Rol o Posicion:</label>
+        <input type="text" id="searchQuery" placeholder="Ejemplo: Software Developer, Marketing Manager, etc.">
+      </div>
+      
+      <div class="input-group">
+        <label for="location">Ubicacion (opcional):</label>
+        <input type="text" id="location" placeholder="Ejemplo: Bogotá, Colombia">
+      </div>
+      
+      <div class="input-group">
+        <label for="maxProfiles">Numero de perfiles a extraer:</label>
+        <select id="maxProfiles">
+          <option value="5">5 perfiles</option>
+          <option value="10" selected>10 perfiles</option>
+          <option value="15">15 perfiles</option>
+          <option value="20">20 perfiles</option>
+        </select>
+      </div>
+      
+      <button id="searchBtn">Iniciar Busqueda Automatica</button>
+      <button id="stopBtn">Detener Busqueda</button>
+      
+      <div id="progressBar">
+        <div id="progressBarFill">0%</div>
+      </div>
+      
+      <div class="settings-section">
+        <div class="input-group">
+          <label>
+            <input type="checkbox" id="autoSendToSheets"> 
+            Enviar automaticamente perfiles a Base de Datos durante la buqueda
+          </label>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Pestaña de gestión de datos -->
+    <div id="dataTab" class="tabcontent">
+      <button id="exportBtn">Exportar a CSV</button>
+      <button id="clearBtn">Limpiar Datos</button>
+      <button id="backupBtn">Crear Copia de Seguridad</button>
+      <button id="restoreBtn">Restaurar Datos</button>
+      
+      <div class="settings-section">
+        <h4>Perfiles Guardados</h4>
+        <button id="sendAllToSheetsBtn" style="background-color: #0F9D58;">Enviar Todos los Perfiles a Google Sheets</button>
+        <p class="info-text">Esta acción enviará todos los perfiles guardados a Google Sheets</p>
+      </div>
+    </div>
+    
+    <!-- Pestaña de configuración -->
+    <div id="configTab" class="tabcontent">
+      <h3>Configuración de Integración</h3>
+      
+      <div class="input-group">
+        <label for="n8nWebhookUrlConfig">URL del Webhook de n8n:</label>
+        <input type="text" id="n8nWebhookUrlConfig" placeholder="https://tu-instancia-n8n.com/webhook/linkedin-profile-receiver">
+        <p class="info-text">URL del webhook de n8n que recibirá los datos de los perfiles de LinkedIn</p>
+      </div>
+      
+      <div class="input-group">
+        <label for="googleSheetId">ID de Google Sheet:</label>
+        <input type="text" id="googleSheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms">
+        <p class="info-text">ID de la hoja de Google Sheets (se encuentra en la URL entre /d/ y /edit)</p>
+      </div>
+      
+      <button id="saveConfigBtn">Guardar Configuración</button>
+      <button id="testConnectionBtn" style="background-color: #FF5722; margin-top: 10px;">Probar Conexión</button>
+      
+      <div style="margin-top: 15px;">
+        <h4>Instrucciones:</h4>
+        <ol style="font-size: 12px; text-align: left;">
+          <li>Configura un webhook en n8n para recibir los datos</li>
+          <li>Copia la URL del webhook generado por n8n</li>
+          <li>Pégala en el campo URL del Webhook</li>
+          <li>Copia el ID de tu Google Sheet desde la URL</li>
+          <li>Guarda la configuración</li>
+          <li>Prueba la conexión para verificar que todo funcione correctamente</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+  
+  <div id="status">Visita un perfil de LinkedIn o usa la busqueda automatica para extraer informacion</div>
+  <input type="file" id="restoreFile" accept=".json" style="display: none;">
+  
+  <footer>
+    Modo local: Todos los datos se procesan y almacenan únicamente en tu navegador.
+  </footer>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
