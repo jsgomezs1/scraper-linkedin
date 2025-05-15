@@ -21,41 +21,9 @@ document.addEventListener('DOMContentLoaded', function() {
   let autoSendToSheets = false;
   
   
-  // Inicializar el sistema de pestañas
-  initTabs();
-  
   // Cargar la configuración de n8n
   loadN8nConfig();
-  
-  // Función para inicializar el sistema de pestañas
-  function initTabs() {
-    // Ocultar todos los contenidos de pestañas excepto el primero
 
-    
-    // Añadir eventos a los botones de pestañas
-    tabButtons.forEach(button => {
-      button.addEventListener('click', function(event) {
-        openTab(event, this.getAttribute('onclick').match(/openTab\(event,\s*'(\w+)'\)/)[1]);
-      });
-    });
-  }
-  
-  // Función para cambiar entre pestañas
-  function openTab(evt, tabName) {
-    // Ocultar todos los contenidos de pestañas
-    tabContents.forEach(content => {
-      content.style.display = 'none';
-    });
-    
-    // Desactivar todos los botones de pestañas
-    tabButtons.forEach(button => {
-      button.classList.remove('active');
-    });
-    
-    // Mostrar la pestaña actual y activar el botón
-    document.getElementById(tabName).style.display = 'block';
-    evt.currentTarget.classList.add('active');
-  }
   
   // Cargar configuración de n8n
   function loadN8nConfig() {
