@@ -444,89 +444,7 @@ function testConnection() {
     }
   }
   
-  
 
-  // Modificar el evento de búsqueda
-  if (searchBtn) {
-    searchBtn.addEventListener('click', async function() {
-      const searchQuery = searchQueryInput.value.trim();
-      const rawLocation = locationInput.value.trim(); // Usar la ubicación original
-      maxProfiles = parseInt(maxProfilesSelect.value);
-  
-      if (!searchQuery) {
-        statusDiv.textContent = 'Por favor, ingresa un rol o posición para buscar.';
-        return;
-      }
-  
-      isSearching = true;
-      shouldStop = false;
-      profilesFound = [];
-      profilesProcessed = 0;
-      updateSearchUI(true);
-  
-      let searchUrl = "";
-  
-      if (rawLocation) { // 1. Usar rawLocation en lugar de location
-        const geoUrn = await getGeoUrn(rawLocation); // 2. Pasar ubicación sin normalizar
-        
-        if (geoUrn) {
-          searchUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(searchQuery)}&geoUrn=${geoUrn}`;
-        } else {
-          // 3. Usar parámetro location con el valor original
-          searchUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(searchQuery)}&location=${encodeURIComponent(rawLocation)}`;
-          statusDiv.textContent = `Ubicación "${rawLocation}" no encontrada. Usando búsqueda básica.`; // 4. Feedback al usuario
-        }
-      } else {
-        searchUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(searchQuery)}`;
-      }
-      // 🔼🔼🔼 CAMBIOS PRINCIPALES AQUÍ 🔼🔼🔼
-  
-      chrome.storage.local.set({
-        searchInProgress: {
-          query: searchQuery,
-          location: rawLocation, // 5. Guardar la ubicación original
-          maxProfiles: maxProfiles,
-          profilesFound: [],
-          profilesProcessed: 0,
-          searchUrl: searchUrl
-        }
-      });
-  
-      chrome.runtime.sendMessage({
-        action: "startSearch",
-        searchUrl: searchUrl,
-        maxProfiles: maxProfiles
-      });
-  
-      statusDiv.textContent = `Búsqueda iniciada: ${searchQuery}${rawLocation ? ` en ${rawLocation}` : ''}`;
-    });
-  }
-  
-  // Detener búsqueda
-  if (stopBtn) {
-    stopBtn.addEventListener('click', function() {
-      shouldStop = true;
-      chrome.runtime.sendMessage({action: "stopSearch"});
-      statusDiv.textContent = "Deteniendo búsqueda...";
-      updateSearchUI(false);
-      
-      // Limpiar el estado de búsqueda en progreso
-      chrome.storage.local.remove(['searchInProgress']);
-    });
-  }
-  
-  // Exportar a CSV
-  if (exportBtn) {
-    exportBtn.addEventListener('click', function() {
-      chrome.storage.local.get(['profiles'], function(result) {
-        if (result.profiles && result.profiles.length > 0) {
-          exportToCSV(result.profiles);
-        } else {
-          statusDiv.textContent = 'No hay perfiles para exportar.';
-        }
-      });
-    });
-  }
   
   // Limpiar datos
   if (clearBtn) {
@@ -1212,18 +1130,6 @@ function testConnection() {
                             });
                           }
                           
-                          // Actualizar la interfaz de búsqueda
-                          function updateSearchUI(isSearching) {
-                            if (isSearching) {
-                              searchBtn.disabled = true;
-                              stopBtn.style.display = 'block';
-                              progressBar.style.display = 'block';
-                            } else {
-                              searchBtn.disabled = false;
-                              stopBtn.style.display = 'none';
-                              progressBar.style.display = 'none';
-                            }
-                          }
                           
                           // Actualizar la barra de progreso
                           function updateProgressBar() {
