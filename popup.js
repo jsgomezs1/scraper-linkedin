@@ -3,17 +3,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const scrapeBtn = document.getElementById('scrapeBtn');
   const profileDataDiv = document.getElementById('profileData');
   
-  // Elementos UI pestaña automática
-  const autoSendToSheetsCheck = document.getElementById('autoSendToSheets');
-  
-  // Elementos UI pestaña datos
-  const exportBtn = document.getElementById('exportBtn');
-  const clearBtn = document.getElementById('clearBtn');
-  const backupBtn = document.getElementById('backupBtn');
-  const restoreBtn = document.getElementById('restoreBtn');
-  const restoreFile = document.getElementById('restoreFile');
-  const sendAllToSheetsBtn = document.getElementById('sendAllToSheetsBtn');
-  
   // Elementos UI pestaña configuración
   const n8nWebhookUrlConfigInput = document.getElementById('n8nWebhookUrlConfig');
   const googleSheetIdInput = document.getElementById('googleSheetId');
@@ -96,7 +85,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Actualizar campos de entrada
         if (n8nWebhookUrlConfigInput) n8nWebhookUrlConfigInput.value = n8nWebhookUrl;
         if (googleSheetIdInput) googleSheetIdInput.value = googleSheetId;
-        if (autoSendToSheetsCheck) autoSendToSheetsCheck.checked = autoSendToSheets;
       }
     });
   }
@@ -105,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
   function saveN8nConfig() {
     const newWebhookUrl = n8nWebhookUrlConfigInput ? n8nWebhookUrlConfigInput.value.trim() : '';
     const newSheetId = googleSheetIdInput ? googleSheetIdInput.value.trim() : '';
-    const autoSend = autoSendToSheetsCheck ? autoSendToSheetsCheck.checked : false;
     
     if (!newWebhookUrl) {
       statusDiv.textContent = 'Por favor, ingresa la URL del webhook de n8n.';
@@ -128,13 +115,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Cargar perfiles guardados
-  chrome.storage.local.get(['profiles'], function(result) {
-    if (result.profiles && result.profiles.length > 0) {
-      exportBtn.style.display = 'block';
-      statusDiv.textContent = `${result.profiles.length} perfiles cargados localmente.`;
-    }
-  });
   
   // Verificar si hay una búsqueda en progreso
   chrome.storage.local.get(['searchInProgress'], function(result) {
@@ -183,7 +163,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 statusDiv.textContent = 'Información extraída exitosamente en modo local!';
                 displayProfileData(response.data);
                 saveProfile(response.data);
-                exportBtn.style.display = 'block';
               } else {
                 statusDiv.textContent = 'Error al extraer información. Asegúrate de estar en un perfil de LinkedIn.';
               }
@@ -218,43 +197,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Enviar a través del webhook si está configurado
         sendProfileToEndpoint(currentProfileData);
       }
-    });
-  }
-  
-  // ENVIAR TODOS LOS PERFILES A GOOGLE SHEETS
-  if (sendAllToSheetsBtn) {
-    sendAllToSheetsBtn.addEventListener('click', function() {
-      chrome.storage.local.get(['profiles'], function(result) {
-        if (!result.profiles || result.profiles.length === 0) {
-          statusDiv.textContent = 'No hay perfiles guardados para enviar.';
-          return;
-        }
-        
-        statusDiv.textContent = `Enviando ${result.profiles.length} perfiles a Supabase...`;
-        
-        // Enviamos los perfiles de uno en uno con un pequeño retraso para evitar sobrecargar
-        let sent = 0;
-        let failed = 0;
-        
-        function sendNextProfile(index) {
-          if (index >= result.profiles.length) {
-            statusDiv.textContent = `Envío completado: ${sent} perfiles enviados, ${failed} fallidos.`;
-            return;
-          }
-          
-          sendProfileToSupabase(result.profiles[index])
-            .then(() => {
-              sent++;
-              setTimeout(() => sendNextProfile(index + 1), 1000); // 1 segundo de espera entre envíos
-            })
-            .catch(() => {
-              failed++;
-              setTimeout(() => sendNextProfile(index + 1), 1000);
-            });
-        }
-        
-        sendNextProfile(0);
-      });
     });
   }
   
@@ -379,13 +321,7 @@ function testConnection() {
   });
 }
   
-  // AUTO-ENVIAR A SHEETS
-  if (autoSendToSheetsCheck) {
-    autoSendToSheetsCheck.addEventListener('change', function() {
-      autoSendToSheets = this.checked;
-      saveN8nConfig();
-    });
-  }
+
   
   // Función de normalización de ubicación
   function normalizeLocation(location) {
@@ -436,38 +372,7 @@ function testConnection() {
       return null;
     }
   }
-  
 
- 
-  
-  if (restoreFile) {
-    restoreFile.addEventListener('change', function(event) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          try {
-            const backupData = JSON.parse(e.target.result);
-            
-            if (backupData && backupData.profiles && Array.isArray(backupData.profiles)) {
-              chrome.storage.local.set({profiles: backupData.profiles}, function() {
-                statusDiv.textContent = `Restaurados ${backupData.profiles.length} perfiles exitosamente.`;
-                if (backupData.profiles.length > 0) {
-                  exportBtn.style.display = 'block';
-                }
-              });
-            } else {
-              statusDiv.textContent = 'El archivo de copia de seguridad no es válido.';
-            }
-          } catch (error) {
-            statusDiv.textContent = 'Error al procesar el archivo: ' + error.message;
-          }
-        };
-        reader.readAsText(file);
-      }
-    });
-  }
-  
   // Escuchar mensajes del background script
   chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     console.log("Mensaje recibido en popup:", message);
@@ -1061,7 +966,6 @@ function testConnection() {
                                 statusDiv.textContent = 'Información extraída exitosamente en modo alternativo!';
                                 displayProfileData(result.data);
                                 saveProfile(result.data);
-                                exportBtn.style.display = 'block';
                               } else {
                                 statusDiv.textContent = result ? result.message : 'Error desconocido en la extracción';
                               }
@@ -1787,9 +1691,7 @@ function addDataRow(label, value) {
       }
       
       chrome.storage.local.set({profiles: profiles});
-      
-      // Actualizar botón de exportación
-      exportBtn.style.display = 'block';
+
     });
   }
   
