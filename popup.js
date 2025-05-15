@@ -5,8 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Elementos UI generales
   const statusDiv = document.getElementById('status');
-  const tabButtons = document.querySelectorAll('.tablinks');
-  const tabContents = document.querySelectorAll('.tabcontent');
   
   // Variables de estado para la búsqueda automática
   let profilesFound = [];
@@ -16,30 +14,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Variables para la integración con n8n
   let n8nWebhookUrl = '';
-  let googleSheetId = '';
   let currentProfileData = null;
   let autoSendToSheets = false;
   
-  
-  // Cargar la configuración de n8n
-  loadN8nConfig();
-
-  
-  // Cargar configuración de n8n
-  function loadN8nConfig() {
-    chrome.storage.local.get(['n8nConfig'], function(result) {
-      if (result.n8nConfig) {
-        n8nWebhookUrl = result.n8nConfig.webhookUrl || '';
-        googleSheetId = result.n8nConfig.sheetId || '';
-        autoSendToSheets = result.n8nConfig.autoSend || false;
-        
-      }
-    });
-  }
-
-
-  
-  // Event Listeners para todos los botones
   
   // EXTRACCIÓN MANUAL DE PERFIL ACTUAL
   if (scrapeBtn) {
@@ -1016,22 +993,7 @@ function createEducationSection(educations) {
   educationSection.appendChild(educationContent);
   return educationSection;
 }
-// Función auxiliar para obtener color según modalidad de trabajo
-function getModalityColor(modality) {
-  if (!modality) return '#6c757d'; // gris por defecto
-  
-  const modalityLower = modality.toLowerCase();
-  
-  if (modalityLower.includes('remot')) {
-    return '#28a745'; // verde para remoto
-  } else if (modalityLower.includes('híbrid') || modalityLower.includes('hybrid') || modalityLower.includes('hibrido')) {
-    return '#17a2b8'; // azul para híbrido
-  } else if (modalityLower.includes('presencial') || modalityLower.includes('on-site') || modalityLower.includes('onsite')) {
-    return '#dc3545'; // rojo para presencial
-  } else {
-    return '#6c757d'; // gris para otros casos
-  }
-}
+
   
 function displayProfileData(data) {
   profileDataDiv.innerHTML = '';
@@ -1654,191 +1616,6 @@ function formatSkillsForEndpoint(skills) {
   return '';
 }
 //-------------------------------------------------------------------------------------------------------------//
-// Funciones auxiliares para formatear datos antes de enviarlos a n8n
-function formatExperienceForN8n(experience) {
-  if (!experience || !Array.isArray(experience)) return '';
-  
-  return experience.map(exp => {
-      let text = '';
-      if (exp.title) text += exp.title;
-      if (exp.company) text += text ? ` en ${exp.company}` : exp.company;
-      if (exp.dateRange) text += text ? ` (${exp.dateRange})` : exp.dateRange;
-      if (exp.workModality) text += text ? ` - Modalidad: ${exp.workModality}` : `Modalidad: ${exp.workModality}`;
 
-      if (exp.workModality) {
-        text += text ? ` - ${exp.workModality}` : exp.workModality;
-      }
 
-      return text;
-    }).filter(text => text.length > 0).join('; ');
-  }
-  
-//-------------------------------------------------------------------------------------------------------------//
-  function formatEducationForN8n(education) {
-    if (!education || !Array.isArray(education)) return '';
-    
-    return education.map(edu => {
-      let text = '';
-      if (edu.degree) text += edu.degree;
-      if (edu.institution) text += text ? ` en ${edu.institution}` : edu.institution;
-      if (edu.dateRange) text += text ? ` (${edu.dateRange})` : edu.dateRange;
-      return text;
-    }).filter(text => text.length > 0).join('; ');
-  }
-  
-//-------------------------------------------------------------------------------------------------------------//
-  function formatInterestsForN8n(interests) {
-    if (!interests) return '';
-    
-    const interestItems = [];
-    
-    if (interests.companies && Array.isArray(interests.companies) && interests.companies.length > 0) {
-      interestItems.push('Empresas: ' + interests.companies.map(c => c.name).join(', '));
-    }
-    
-    if (interests.groups && Array.isArray(interests.groups) && interests.groups.length > 0) {
-      interestItems.push('Grupos: ' + interests.groups.map(g => g.name).join(', '));
-    }
-    
-    if (interests.newsletters && Array.isArray(interests.newsletters) && interests.newsletters.length > 0) {
-      interestItems.push('Newsletters: ' + interests.newsletters.map(n => n.name).join(', '));
-    }
-    
-    if (interests.schools && Array.isArray(interests.schools) && interests.schools.length > 0) {
-      interestItems.push('Instituciones: ' + interests.schools.map(s => s.name).join(', '));
-    }
-    
-    return interestItems.join('; ');
-  }
-  
-  function formatSkillsForN8n(skills) {
-    if (!skills || !Array.isArray(skills)) return '';
-    
-    return skills.map(skill => {
-      if (typeof skill === 'string') return skill;
-      return skill.name || '';
-    }).filter(s => s).join(', ');
-  }
-//-------------------------------------------------------------------------------------------------------------//
-  // Exportar a CSV
-  function exportToCSV(profiles) {
-    // Definir encabezados para datos básicos
-    const basicHeaders = ['Nombre', 'Título', 'Ubicación', 'Acerca de', 'URL del Perfil', 'Fecha de Extracción'];
-    const basicKeys = ['name', 'headline', 'location', 'about', 'profileUrl', 'extractionDate'];
-    
-    // Encabezados para experiencia (hasta 3 experiencias)
-    const expHeaders = [];
-    const expKeys = [];
-    for (let i = 1; i <= 3; i++) {
-      expHeaders.push(`Experiencia ${i} - Cargo`, `Experiencia ${i} - Empresa`, `Experiencia ${i} - Periodo`, `Experiencia ${i} - Ubicación`, `Experiencia ${i} - Modalidad`, `Experiencia ${i} - Modalidad`);
-      expKeys.push(`exp${i}_title`, `exp${i}_company`, `exp${i}_period`, `exp${i}_location`, `exp${i}_modality`, `exp${i}_workModality`);
-    }
-    
-    // Encabezados para educación (hasta 2 educaciones)
-    const eduHeaders = [];
-    const eduKeys = [];
-    for (let i = 1; i <= 2; i++) {
-      eduHeaders.push(`Educación ${i} - Institución`, `Educación ${i} - Título`, `Educación ${i} - Periodo`);
-      eduKeys.push(`edu${i}_institution`, `edu${i}_degree`, `edu${i}_period`);
-    }
-    
-    // Encabezados para intereses
-    const interestHeaders = ['Empresas Seguidas', 'Grupos', 'Newsletters', 'Instituciones Educativas'];
-    const interestKeys = ['companies_list', 'groups_list', 'newsletters_list', 'schools_list'];
-    
-    // Combinar todos los encabezados
-    const headers = [...basicHeaders, ...expHeaders, ...eduHeaders, ...interestHeaders, 'Habilidades'];
-    
-    // Preparar el contenido CSV
-    let csvContent = headers.join(',') + '\n';
-    
-    profiles.forEach(profile => {
-      // Crear un objeto plano con todos los datos
-      const flatProfile = {};
-      
-      // Datos básicos
-      basicKeys.forEach((key, index) => {
-        flatProfile[key] = profile[key] || '';
-      });
-      
-      // Datos de experiencia
-      if (profile.experience && Array.isArray(profile.experience)) {
-        profile.experience.slice(0, 3).forEach((exp, index) => {
-          flatProfile[`exp${index+1}_title`] = exp.title || '';
-          flatProfile[`exp${index+1}_company`] = exp.company || '';
-          flatProfile[`exp${index+1}_period`] = exp.dateRange || '';
-          flatProfile[`exp${index+1}_location`] = exp.location || '';
-          flatProfile[`exp${index+1}_modality`] = exp.workModality || '';
-        });
-      }
-      
-      // Datos de educación
-      if (profile.education && Array.isArray(profile.education)) {
-        profile.education.slice(0, 2).forEach((edu, index) => {
-          flatProfile[`edu${index+1}_institution`] = edu.institution || '';
-          flatProfile[`edu${index+1}_degree`] = edu.degree || '';
-          flatProfile[`edu${index+1}_period`] = edu.dateRange || '';
-        });
-      }
-      
-      // Datos de intereses
-      if (profile.interests) {
-        // Empresas
-        if (profile.interests.companies && Array.isArray(profile.interests.companies)) {
-          flatProfile.companies_list = profile.interests.companies.map(c => c.name).join('; ');
-        }
-        
-        // Grupos
-        if (profile.interests.groups && Array.isArray(profile.interests.groups)) {
-          flatProfile.groups_list = profile.interests.groups.map(g => g.name).join('; ');
-        }
-        
-        // Newsletters
-        if (profile.interests.newsletters && Array.isArray(profile.interests.newsletters)) {
-          flatProfile.newsletters_list = profile.interests.newsletters.map(n => n.name).join('; ');
-        }
-        
-        // Instituciones educativas
-        if (profile.interests.schools && Array.isArray(profile.interests.schools)) {
-          flatProfile.schools_list = profile.interests.schools.map(s => s.name).join('; ');
-        }
-      }
-      
-      // Habilidades
-      let skillsStr = '';
-      if (profile.skills && Array.isArray(profile.skills)) {
-        skillsStr = profile.skills.map(skill => {
-          if (typeof skill === 'string') return skill;
-          return skill.name || '';
-        }).filter(s => s).join(', ');
-      }
-      
-      // Crear la fila CSV
-      const values = [
-        ...basicKeys.map(key => `"${String(flatProfile[key] || '').replace(/"/g, '""')}"`),
-        ...expKeys.map(key => `"${String(flatProfile[key] || '').replace(/"/g, '""')}"`),
-        ...eduKeys.map(key => `"${String(flatProfile[key] || '').replace(/"/g, '""')}"`),
-        ...interestKeys.map(key => `"${String(flatProfile[key] || '').replace(/"/g, '""')}"`),
-        `"${skillsStr.replace(/"/g, '""')}"`
-      ];
-      
-      csvContent += values.join(',') + '\n';
-    });
-    
-    // Usar la API de chrome.downloads para guardar el archivo localmente
-    const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
-    const url = URL.createObjectURL(blob);
-    
-    chrome.downloads.download({
-      url: url,
-      filename: 'linkedin_profiles.csv',
-      saveAs: true
-    }, function(downloadId) {
-      if (chrome.runtime.lastError) {
-        statusDiv.textContent = 'Error al exportar: ' + chrome.runtime.lastError.message;
-      } else {
-        statusDiv.textContent = 'Archivo CSV descargado exitosamente.';
-      }
-    });
-  }
 });
