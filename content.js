@@ -39,19 +39,12 @@ if (window.linkedInScraperInitialized) {
     // Agregamos un timestamp para saber cuándo se extrajo la información
     const timestamp = new Date().toISOString();
     
-    // Intentar extraer los datos normales
-    console.log("🔍 Iniciando extracción de datos del perfil...");
-    
-    // Extraer experiencia primero para diagnóstico
-    const experienceData = getExperienceDetailed();
-    console.log(`✅ Extracción de experiencia completada - Resultados: ${experienceData.length} registros`);
-    
     const profileData = {
       name: getName(),
       headline: getHeadline(),
       location: getLocation(),
       about: getAbout(),
-      experience: experienceData,
+      experience: getExperienceDetailed(),
       education: getEducationDetailed(),
       skills: getSkillsDetailed(),
       certifications: getCertifications(),
@@ -59,36 +52,12 @@ if (window.linkedInScraperInitialized) {
       languages: getLanguagesDetailed(),
       profileUrl: window.location.href,
       extractionDate: timestamp,
-      source: 'content_script_extraction'
     };
     
     // Verificar que tenemos datos de experiencia
     if (!profileData.experience || profileData.experience.length === 0) {
-      console.log("⚠️ No se encontraron experiencias, intentando detectar IBM específicamente");
       
-      // Buscar contenido relacionado con IBM en la página completa
-      const ibmText = document.body.textContent;
-      if (ibmText.includes('IBM') && 
-          (ibmText.includes('Desarrollador de Modelos') || ibmText.includes('Machine Learning'))) {
-        
-        console.log("✅ Detectado contenido relacionado con IBM, agregando experiencia básica");
-        
-        // Agregar una experiencia básica para no mostrar "No disponible"
-        profileData.experience = [{
-          title: 'Desarrollador de Modelos de Machine Learning',
-          company: 'IBM',
-          employmentType: 'Autónomo',
-          dateRange: 'ene. 2025 - feb. 2025',
-          startDate: 'ene. 2025',
-          endDate: 'feb. 2025',
-          duration: '2 meses',
-          location: 'Cali, Valle del Cauca, Colombia',
-          workModality: 'Remoto',
-          description: 'Como parte del curso Aprendizaje Automático con Python de IBM, desarrollé un modelo predictivo para clasificar la probabilidad de lluvia al día siguiente.'
-        }];
-      } else {
-        // Si no encontramos IBM, agregar una experiencia genérica
-        console.log("⚠️ Agregando experiencia básica para evitar 'No disponible'");
+    
         
         profileData.experience = [{
           title: profileData.headline || 'Profesional',
@@ -102,7 +71,6 @@ if (window.linkedInScraperInitialized) {
           workModality: '',
           description: 'Información no disponible en el formato actual de LinkedIn. Se ha creado una entrada genérica para mantener compatibilidad.'
         }];
-      }
     }
     
     // Guardar información en memoria local para mayor seguridad
@@ -482,23 +450,6 @@ if (window.linkedInScraperInitialized) {
       }
     }
     
-    // Si no hay resultados para Top Voices, añadir ejemplos de muestra como fallback
-    if (interests.people.length === 0) {
-      interests.people = [
-        {
-          name: 'Daniel Ek',
-          description: 'Founder and CEO of Spotify - Founder Prima Materia and Neko Health',
-          followers: '188885'
-        },
-        {
-          name: 'Miguel Ángel Durán García',
-          description: 'Programación JavaScript y Desarrollo Web. Reconocido Google Developer Expert, Microsoft MVP y GitHub Star. ⭐',
-          followers: '425011'
-        }
-      ];
-    }
-    
-    console.log("Intereses finales:", interests);
     
     return interests;
   }
