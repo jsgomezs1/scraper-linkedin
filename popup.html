@@ -1,286 +1,233 @@
 <!DOCTYPE html>
-<html>
+<html lang="en"> 
 <head>
-  <title>LinkedIn Profile Scraper Local</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>LinkedIn Profile Scraper</title> 
   <style>
+    :root {
+      --primary-color: #0077b5; /* LinkedIn Blue -ish */
+      --primary-hover-color: #005582;
+      --success-color: #4CAF50;
+      --danger-color: #f44336;
+      --warning-color: #ff9800;
+      --info-color: #2196F3;
+      --light-gray: #f8f9fa;
+      --medium-gray: #e9ecef;
+      --dark-gray: #ced4da;
+      --text-color: #333;
+      --text-muted-color: #666;
+      --white-color: #ffffff;
+      --border-radius: 5px; /* Consistent border radius */
+      --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      --transition-speed: 0.2s ease-in-out;
+    }
+
     body {
       width: 380px;
-      padding: 10px;
-      font-family: Arial, sans-serif;
+      padding: 15px; /* Slightly increased padding */
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Modern font stack */
+      background-color: var(--light-gray); /* Light background for the body */
+      color: var(--text-color);
+      line-height: 1.6; /* Improved readability */
     }
+
+    h2 {
+      text-align: center;
+      color: var(--primary-color);
+      margin-bottom: 20px; /* More space below title */
+    }
+
+    /* General Button Styling */
     button {
-      background-color: #9c27b0;
-      color: white;
+      background-color: var(--primary-color);
+      color: var(--white-color);
       border: none;
-      padding: 8px 12px;
-      border-radius: 4px;
+      padding: 10px 15px; /* Slightly larger padding */
+      border-radius: var(--border-radius);
       cursor: pointer;
       margin-bottom: 10px;
       width: 100%;
+      font-size: 1rem; /* Consistent font size */
+      transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
+      box-shadow: var(--box-shadow);
     }
+
     button:hover {
-      background-color: #006097;
+      background-color: var(--primary-hover-color);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
+
     button:disabled {
       background-color: #cccccc;
       cursor: not-allowed;
+      box-shadow: none;
     }
-    input, select {
+
+    button:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+
+
+    input[type="text"],
+    input[type="file"],
+    select {
       width: 100%;
-      padding: 8px;
+      padding: 10px; /* Slightly more padding */
       margin-bottom: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
+      border: 1px solid var(--dark-gray);
+      border-radius: var(--border-radius);
       box-sizing: border-box;
+      font-size: 0.95rem;
+      transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
     }
+
+    input[type="text"]:focus,
+    input[type="file"]:focus,
+    select:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 0.2rem rgba(0, 119, 181, 0.25); /* Focus ring */
+      outline: none;
+    }
+
     label {
       display: block;
-      margin-bottom: 5px;
+      margin-bottom: 6px; /* Adjusted spacing */
       font-weight: bold;
-      color: #333;
+      color: var(--text-color);
+      font-size: 0.9rem;
     }
+
     .input-group {
-      margin-bottom: 10px;
+      margin-bottom: 15px; /* Increased spacing */
     }
-    #status {
-      margin-top: 10px;
-      color: #666;
-    }
-    #progressBar {
-      width: 100%;
-      background-color: #f1f1f1;
-      border-radius: 4px;
-      margin-top: 10px;
-      display: none;
-    }
-    #progressBar > div {
-      height: 20px;
-      background-color: #4CAF50;
-      border-radius: 4px;
-      text-align: center;
-      line-height: 20px;
-      color: white;
-    }
-    #profileData {
-      margin-top: 10px;
-      border: 1px solid #ddd;
-      padding: 10px;
-      max-height: 300px;
-      overflow-y: auto;
-      display: none;
-    }
+
     .data-row {
-      margin-bottom: 8px;
+      margin-bottom: 10px; /* Increased spacing */
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--medium-gray); /* Separator for rows */
     }
-    .label {
+    .data-row:last-child {
+        border-bottom: none; /* No border for the last item */
+    }
+
+    .data-row .label { /* More specific selector */
       font-weight: bold;
+      color: var(--primary-color); /* Make labels stand out */
+      margin-right: 5px;
     }
-    #exportBtn {
-      background-color: #4CAF50;
-      margin-top: 10px;
-      display: none;
-    }
-    #clearBtn {
-      background-color: #f44336;
-    }
-    #backupBtn {
-      background-color: #ff9800;
-    }
-    #restoreBtn {
-      background-color: #9c27b0;
-    }
-    #searchBtn {
-      background-color: #2196F3;
-    }
-    #stopBtn {
-      background-color: #f44336;
-      display: none;
-    }
-    #sendToSheetsBtn {
-      background-color: #0F9D58;
-      display: none;
-    }
-    #saveSettingsBtn, #saveConfigBtn {
-      background-color: #4285F4;
-      margin-top: 10px;
-    }
+
     .mode-badge {
       display: inline-block;
-      background-color: #333;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-      margin-left: 8px;
+      background-color: var(--text-muted-color);
+      color: var(--white-color);
+      padding: 3px 8px; /* Adjusted padding */
+      border-radius: var(--border-radius);
+      font-size: 0.75rem; /* Smaller font */
+      margin-left: 10px;
+      vertical-align: middle; /* Align with text */
     }
+
     .tab-container {
-      margin-bottom: 15px;
+      margin-bottom: 20px;
+      background-color: var(--white-color);
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
     }
+
     .tab {
       overflow: hidden;
-      border: 1px solid #ccc;
-      background-color: #f1f1f1;
-      border-radius: 4px 4px 0 0;
+      border-bottom: 1px solid var(--dark-gray); /* Border only at the bottom of the tab bar */
+      background-color: var(--light-gray); /* Light background for tab bar */
+      border-radius: var(--border-radius) var(--border-radius) 0 0; /* Rounded top corners */
+      display: flex; /* Use flexbox for even distribution */
     }
+
     .tab button {
-      background-color: inherit;
-      float: left;
+      background-color: transparent; /* Inherit by default */
+      float: none; /* Remove float */
+      flex-grow: 1; /* Distribute space evenly */
       border: none;
       outline: none;
       cursor: pointer;
-      padding: 10px 16px;
-      transition: 0.3s;
-      width: auto;
+      padding: 12px 16px; /* Consistent padding */
+      transition: background-color var(--transition-speed), color var(--transition-speed);
+      width: auto; /* Override general button width */
       margin: 0;
-      border-radius: 0;
-      color: #333;
+      border-radius: 0; /* Tabs shouldn't be individually rounded like action buttons */
+      color: var(--text-muted-color);
+      font-size: 0.9rem;
+      box-shadow: none; /* No shadow for tab buttons */
+      border-bottom: 3px solid transparent; /* For active indicator */
     }
+
     .tab button:hover {
-      background-color: #ddd;
+      background-color: var(--medium-gray);
+      color: var(--primary-color);
     }
+
     .tab button.active {
-      background-color: #0077b5;
-      color: white;
+      background-color: transparent; /* Keep tab content background */
+      color: var(--primary-color);
+      font-weight: bold;
+      border-bottom: 3px solid var(--primary-color); /* Active indicator line */
     }
+
     .tabcontent {
       display: none;
-      padding: 15px;
-      border: 1px solid #ccc;
+      padding: 20px; /* More padding in content area */
+      border: none; /* Remove border, as tab-container has shadow */
       border-top: none;
-      border-radius: 0 0 4px 4px;
+      border-radius: 0 0 var(--border-radius) var(--border-radius); /* Rounded bottom corners */
+      background-color: var(--white-color);
     }
+
     footer {
-      margin-top: 15px;
-      font-size: 11px;
+      margin-top: 25px;
+      font-size: 0.8rem; /* Slightly smaller */
       color: #999;
       text-align: center;
-      border-top: 1px solid #eee;
-      padding-top: 10px;
-    }
-    .info-text {
-      font-size: 12px;
-      color: #666;
-      margin-top: 8px;
-    }
-    .settings-section {
-      border-top: 1px solid #eee;
-      margin-top: 15px;
+      border-top: 1px solid var(--medium-gray);
       padding-top: 15px;
+    }
+
+    .info-text {
+      font-size: 0.85rem; /* Slightly smaller */
+      color: var(--text-muted-color);
+      margin-top: 10px;
+      margin-bottom: 15px; /* Add some bottom margin */
+    }
+
+    .settings-section {
+      border-top: 1px solid var(--medium-gray);
+      margin-top: 20px;
+      padding-top: 20px;
+    }
+
+    /* Utility for hidden elements */
+    .hidden {
+        display: none;
     }
   </style>
 </head>
 <body>
-  <h2>LinkedIn Profile Scraper <span class="mode-badge">LOCAL</span></h2>
-  
+
+  <h2>LinkedIn Profile Scraper</h2>
+
   <div class="tab-container">
-    <div class="tab">
-      <button class="tablinks active" onclick="openTab(event, 'manualTab')">Manual</button>
-      <button class="tablinks" onclick="openTab(event, 'autoTab')">Automatico</button>
-      <button class="tablinks" onclick="openTab(event, 'dataTab')">Datos</button>
-      <button class="tablinks" onclick="openTab(event, 'configTab')">Config</button>
-    </div>
-    
-    <!-- Pestaña de extracción manual -->
     <div id="manualTab" class="tabcontent" style="display: block;">
-      <p>Extrae informacion del perfil actual de LinkedIn que estas visitando.</p>
-      <button id="scrapeBtn">Extraer Perfil Actual</button>
-      <button id="sendToSheetsBtn">Enviar a Base de datos</button>
-      <div id="profileData"></div>
+      <button id="scrapeBtn">Extract Current Profile</button>
+      <button id="sendToSheetsBtn">Send to Database</button> 
+      <div id="profileData">
+          </div>
     </div>
-    
-    <!-- Pestaña de búsqueda automática -->
-    <div id="autoTab" class="tabcontent">
-      <div class="input-group">
-        <label for="searchQuery">Rol o Posicion:</label>
-        <input type="text" id="searchQuery" placeholder="Ejemplo: Software Developer, Marketing Manager, etc.">
-      </div>
-      
-      <div class="input-group">
-        <label for="location">Ubicacion (opcional):</label>
-        <input type="text" id="location" placeholder="Ejemplo: Bogotá, Colombia">
-      </div>
-      
-      <div class="input-group">
-        <label for="maxProfiles">Numero de perfiles a extraer:</label>
-        <select id="maxProfiles">
-          <option value="5">5 perfiles</option>
-          <option value="10" selected>10 perfiles</option>
-          <option value="15">15 perfiles</option>
-          <option value="20">20 perfiles</option>
-        </select>
-      </div>
-      
-      <button id="searchBtn">Iniciar Busqueda Automatica</button>
-      <button id="stopBtn">Detener Busqueda</button>
-      
-      <div id="progressBar">
-        <div id="progressBarFill">0%</div>
-      </div>
-      
-      <div class="settings-section">
-        <div class="input-group">
-          <label>
-            <input type="checkbox" id="autoSendToSheets"> 
-            Enviar automaticamente perfiles a Base de Datos durante la buqueda
-          </label>
-        </div>
-      </div>
+
     </div>
-    
-    <!-- Pestaña de gestión de datos -->
-    <div id="dataTab" class="tabcontent">
-      <button id="exportBtn">Exportar a CSV</button>
-      <button id="clearBtn">Limpiar Datos</button>
-      <button id="backupBtn">Crear Copia de Seguridad</button>
-      <button id="restoreBtn">Restaurar Datos</button>
-      
-      <div class="settings-section">
-        <h4>Perfiles Guardados</h4>
-        <button id="sendAllToSheetsBtn" style="background-color: #0F9D58;">Enviar Todos los Perfiles a Google Sheets</button>
-        <p class="info-text">Esta acción enviará todos los perfiles guardados a Google Sheets</p>
-      </div>
-    </div>
-    
-    <!-- Pestaña de configuración -->
-    <div id="configTab" class="tabcontent">
-      <h3>Configuración de Integración</h3>
-      
-      <div class="input-group">
-        <label for="n8nWebhookUrlConfig">URL del Webhook de n8n:</label>
-        <input type="text" id="n8nWebhookUrlConfig" placeholder="https://tu-instancia-n8n.com/webhook/linkedin-profile-receiver">
-        <p class="info-text">URL del webhook de n8n que recibirá los datos de los perfiles de LinkedIn</p>
-      </div>
-      
-      <div class="input-group">
-        <label for="googleSheetId">ID de Google Sheet:</label>
-        <input type="text" id="googleSheetId" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms">
-        <p class="info-text">ID de la hoja de Google Sheets (se encuentra en la URL entre /d/ y /edit)</p>
-      </div>
-      
-      <button id="saveConfigBtn">Guardar Configuración</button>
-      <button id="testConnectionBtn" style="background-color: #FF5722; margin-top: 10px;">Probar Conexión</button>
-      
-      <div style="margin-top: 15px;">
-        <h4>Instrucciones:</h4>
-        <ol style="font-size: 12px; text-align: left;">
-          <li>Configura un webhook en n8n para recibir los datos</li>
-          <li>Copia la URL del webhook generado por n8n</li>
-          <li>Pégala en el campo URL del Webhook</li>
-          <li>Copia el ID de tu Google Sheet desde la URL</li>
-          <li>Guarda la configuración</li>
-          <li>Prueba la conexión para verificar que todo funcione correctamente</li>
-        </ol>
-      </div>
-    </div>
-  </div>
-  
-  <div id="status">Visita un perfil de LinkedIn o usa la busqueda automatica para extraer informacion</div>
-  <input type="file" id="restoreFile" accept=".json" style="display: none;">
-  
-  <footer>
-    Modo local: Todos los datos se procesan y almacenan únicamente en tu navegador.
-  </footer>
-  
+
+  <input type="file" id="restoreFile" accept=".json" class="hidden">
+
+
   <script src="popup.js"></script>
 </body>
 </html>
