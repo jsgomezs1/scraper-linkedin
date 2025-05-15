@@ -4,10 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const profileDataDiv = document.getElementById('profileData');
   
   // Elementos UI pestaña configuración
-  const n8nWebhookUrlConfigInput = document.getElementById('n8nWebhookUrlConfig');
-  const googleSheetIdInput = document.getElementById('googleSheetId');
   const saveConfigBtn = document.getElementById('saveConfigBtn');
-  const testConnectionBtn = document.getElementById('testConnectionBtn');
   
   
   // Elementos UI generales
@@ -82,26 +79,14 @@ document.addEventListener('DOMContentLoaded', function() {
         googleSheetId = result.n8nConfig.sheetId || '';
         autoSendToSheets = result.n8nConfig.autoSend || false;
         
-        // Actualizar campos de entrada
-        if (n8nWebhookUrlConfigInput) n8nWebhookUrlConfigInput.value = n8nWebhookUrl;
-        if (googleSheetIdInput) googleSheetIdInput.value = googleSheetId;
       }
     });
   }
   
   // Guardar configuración de n8n
   function saveN8nConfig() {
-    const newWebhookUrl = n8nWebhookUrlConfigInput ? n8nWebhookUrlConfigInput.value.trim() : '';
-    const newSheetId = googleSheetIdInput ? googleSheetIdInput.value.trim() : '';
+
     
-    if (!newWebhookUrl) {
-      statusDiv.textContent = 'Por favor, ingresa la URL del webhook de n8n.';
-      return;
-    }
-    
-    // Guardar configuración
-    n8nWebhookUrl = newWebhookUrl;
-    googleSheetId = newSheetId;
     autoSendToSheets = autoSend;
     
     chrome.storage.local.set({
@@ -200,178 +185,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // GUARDAR CONFIGURACIÓN DE N8N
-  if (saveConfigBtn) {
-    saveConfigBtn.addEventListener('click', function() {
-      saveN8nConfig();
-    });
-  }
-  
-  // PROBAR CONEXIÓN CON N8N
-  if (testConnectionBtn) {
-    testConnectionBtn.addEventListener('click', function() {
-      const webhookUrl = n8nWebhookUrlConfigInput ? n8nWebhookUrlConfigInput.value.trim() : '';
-      
-      if (!webhookUrl) {
-        statusDiv.textContent = 'Por favor, ingresa la URL del webhook de n8n.';
-        return;
-      }
-      
-      statusDiv.textContent = 'Probando conexión con n8n...';
-      
-      // Crear un pequeño objeto de prueba
-      const testPayload = {
-        test: true,
-        message: "Test de conexión desde LinkedIn Profile Scraper",
-        timestamp: new Date().toISOString()
-      };
-      
-      // Enviar solicitud de prueba
-      fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(testPayload)
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Error en la respuesta del servidor: ' + response.status);
-        }
-        return response.json();
-      })
-      .then(data => {
-        statusDiv.textContent = '✅ Conexión exitosa con n8n!';
-        console.log('Respuesta de prueba de n8n:', data);
-      })
-      .catch(error => {
-        statusDiv.textContent = '❌ Error al conectar con n8n: ' + error.message;
-        console.error('Error de prueba de conexión:', error);
-      });
-    });
-  }
-// Suponiendo que ya tiene la experiencia en una variable llamada 'experienceEntries'
-// Puede incluir esto en popup.js justo después de extraer los datos del perfil actual
-
-function renderExperience(experiences) {
-  const profileDataDiv = document.getElementById('profileData');
-  profileDataDiv.innerHTML = ''; // Limpiar contenido anterior
-  profileDataDiv.style.display = 'block';
-
-  if (!experiences || experiences.length === 0) {
-    profileDataDiv.innerHTML = '<p><strong>Experiencia:</strong> No disponible</p>';
-    return;
-  }
-
-  const container = document.createElement('div');
-
-  experiences.forEach(exp => {
-    const block = document.createElement('div');
-    block.classList.add('data-row');
-    block.innerHTML = `
-      <strong>${exp.title || 'Sin título'}</strong><br>
-      ${exp.company ? `<em>${exp.company}</em>` : ''} ${exp.employmentType ? `· ${exp.employmentType}` : ''}<br>
-      ${exp.startDate || ''} - ${exp.endDate || ''} ${exp.isCurrent ? '· Actualmente' : ''}<br>
-      ${exp.location || ''} ${exp.locationType ? `· ${exp.locationType}` : ''}<br>
-      ${exp.description ? `<p>${exp.description}</p>` : ''}
-    `;
-    container.appendChild(block);
-  });
-
-  profileDataDiv.appendChild(container);
-}
-
-// Ejemplo de uso después de extraer los datos del perfil
-// renderExperience(perfil.experiencia);
 
 
-  // Modificación a la función testConnection o al botón de prueba
-function testConnection() {
-  const webhookUrl = n8nWebhookUrlConfigInput.value.trim();
-  
-  const payload = {
-    perfil: {
-      test: true,
-      urlPerfil: "https://linkedin.com/test-profile",
-      nombre: "Usuario de Prueba",
-      titulo: "Test desde LinkedIn Scraper",
-      ubicacion: "Ubicación de Prueba",
-      fechaExtraccion: new Date().toISOString()
-    }
-  };
-  
-  fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload)
-  })
-  .then(response => {
-    console.log("Status:", response.status);
-    return response.text();
-  })
-  .then(data => {
-    console.log("Respuesta:", data);
-    statusDiv.textContent = "Conexión exitosa!";
-  })
-  .catch(error => {
-    console.error("Error:", error);
-    statusDiv.textContent = "Error: " + error.message;
-  });
-}
-  
-
-  
-  // Función de normalización de ubicación
-  function normalizeLocation(location) {
-    // Limpieza básica sin alterar la estructura original
-    return location.trim()
-      .replace(/\s*,\s*/g, ', ')          // Unifica espacios alrededor de comas
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Elimina acentos
-      .replace(/[^a-zA-Z0-9, ]/g, '')     // Quita caracteres especiales
-      .split(', ')
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-      .join(', ');
-  }
-
-  function getCSRFToken() {
-    const match = document.cookie.match(/JSESSIONID="(.*?)"/);
-    if (match && match[1]) {
-      // El token viene entre comillas dobles y prefijado por ajax:
-      return match[1].replace('ajax:', '');
-    }
-    return null;
-  }
-  
-  // Mejorar la obtención del geoUrn
-  async function getGeoUrn(locationName) {
-    try {
-      const csrfToken = getCSRFToken();
-      if (!csrfToken) throw new Error('CSRF Token no encontrado');
-  
-      // Usar la API de typeahead de LinkedIn para búsqueda precisa
-      const searchUrl = `https://www.linkedin.com/voyager/api/typeahead/hits?q=geo&query=${encodeURIComponent(locationName)}`;
-  
-      const response = await fetch(searchUrl, {
-        headers: {
-          'csrf-token': csrfToken,
-          'accept': 'application/json'
-        }
-      });
-  
-      const data = await response.json();
-      const locationHit = data.elements.find(hit => 
-        hit.hitType === "GEO" && 
-        hit.text.text.toLowerCase() === locationName.toLowerCase()
-      );
-  
-      return locationHit?.targetUrn.split(':').pop() || null;
-    } catch (error) {
-      console.error('Error buscando geoUrn:', error);
-      return null;
-    }
-  }
 
   // Escuchar mensajes del background script
   chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
