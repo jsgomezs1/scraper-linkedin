@@ -3,17 +3,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const scrapeBtn = document.getElementById('scrapeBtn');
   const profileDataDiv = document.getElementById('profileData');
   
-  // Elementos UI pestaña configuración
-  const saveConfigBtn = document.getElementById('saveConfigBtn');
-  
-  
   // Elementos UI generales
   const statusDiv = document.getElementById('status');
   const tabButtons = document.querySelectorAll('.tablinks');
   const tabContents = document.querySelectorAll('.tabcontent');
   
   // Variables de estado para la búsqueda automática
-  let isSearching = false;
   let profilesFound = [];
   let profilesProcessed = 0;
   let maxProfiles = 10;
@@ -25,8 +20,6 @@ document.addEventListener('DOMContentLoaded', function() {
   let currentProfileData = null;
   let autoSendToSheets = false;
   
-  // Verificar modo de operación local
-  const isLocalMode = true; // Siempre en modo local
   
   // Inicializar el sistema de pestañas
   initTabs();
@@ -37,14 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Función para inicializar el sistema de pestañas
   function initTabs() {
     // Ocultar todos los contenidos de pestañas excepto el primero
-    tabContents.forEach((content, index) => {
-      if (index === 0) {
-        content.style.display = 'block';
-        tabButtons[index].classList.add('active');
-      } else {
-        content.style.display = 'none';
-      }
-    });
+
     
     // Añadir eventos a los botones de pestañas
     tabButtons.forEach(button => {
@@ -82,39 +68,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-  
-  // Guardar configuración de n8n
-  function saveN8nConfig() {
 
-    
-    autoSendToSheets = autoSend;
-    
-    chrome.storage.local.set({
-      n8nConfig: {
-        webhookUrl: n8nWebhookUrl,
-        sheetId: googleSheetId,
-        autoSend: autoSendToSheets
-      }
-    }, function() {
-      statusDiv.textContent = 'Configuración guardada correctamente.';
-    });
-  }
-  
-  
-  // Verificar si hay una búsqueda en progreso
-  chrome.storage.local.get(['searchInProgress'], function(result) {
-    if (result.searchInProgress) {
-      isSearching = true;
-      profilesFound = result.searchInProgress.profilesFound || [];
-      profilesProcessed = result.searchInProgress.profilesProcessed || 0;
-      maxProfiles = result.searchInProgress.maxProfiles || 10;
-      
-      updateSearchUI(true);
-      updateProgressBar();
-      
-      statusDiv.textContent = `Búsqueda en progreso: ${profilesProcessed} de ${maxProfiles} perfiles procesados.`;
-    }
-  });
+
   
   // Event Listeners para todos los botones
   
