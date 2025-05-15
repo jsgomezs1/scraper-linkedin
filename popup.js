@@ -4,13 +4,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const profileDataDiv = document.getElementById('profileData');
   
   // Elementos UI pestaña automática
-  const searchQueryInput = document.getElementById('searchQuery');
-  const locationInput = document.getElementById('location');
-  const maxProfilesSelect = document.getElementById('maxProfiles');
-  const searchBtn = document.getElementById('searchBtn');
-  const stopBtn = document.getElementById('stopBtn');
-  const progressBar = document.getElementById('progressBar');
-  const progressBarFill = document.getElementById('progressBarFill');
   const autoSendToSheetsCheck = document.getElementById('autoSendToSheets');
   
   // Elementos UI pestaña datos
@@ -445,62 +438,7 @@ function testConnection() {
   }
   
 
-  
-  // Limpiar datos
-  if (clearBtn) {
-    clearBtn.addEventListener('click', function() {
-      if (confirm('¿Estás seguro de que deseas eliminar todos los perfiles guardados?')) {
-        chrome.storage.local.set({profiles: []}, function() {
-          statusDiv.textContent = 'Todos los datos han sido eliminados.';
-          profileDataDiv.style.display = 'none';
-          exportBtn.style.display = 'none';
-          
-          // También eliminar del localStorage
-          localStorage.removeItem('lastExtractedProfile');
-        });
-      }
-    });
-  }
-  
-  // Backup de datos
-  if (backupBtn) {
-    backupBtn.addEventListener('click', function() {
-      chrome.storage.local.get(['profiles'], function(result) {
-        if (result.profiles && result.profiles.length > 0) {
-          const backupData = {
-            profiles: result.profiles,
-            timestamp: new Date().toISOString(),
-            version: '1.0-local'
-          };
-          
-          const jsonStr = JSON.stringify(backupData);
-          const blob = new Blob([jsonStr], {type: 'application/json'});
-          const url = URL.createObjectURL(blob);
-          
-          chrome.downloads.download({
-            url: url,
-            filename: 'linkedin_profiles_backup.json',
-            saveAs: true
-          }, function(downloadId) {
-            if (chrome.runtime.lastError) {
-              statusDiv.textContent = 'Error al crear copia de seguridad: ' + chrome.runtime.lastError.message;
-            } else {
-              statusDiv.textContent = 'Copia de seguridad creada exitosamente.';
-            }
-          });
-        } else {
-          statusDiv.textContent = 'No hay perfiles para respaldar.';
-        }
-      });
-    });
-  }
-  
-  // Restaurar datos
-  if (restoreBtn) {
-    restoreBtn.addEventListener('click', function() {
-      restoreFile.click();
-    });
-  }
+ 
   
   if (restoreFile) {
     restoreFile.addEventListener('change', function(event) {
@@ -1130,16 +1068,7 @@ function testConnection() {
                             });
                           }
                           
-                          
-                          // Actualizar la barra de progreso
-                          function updateProgressBar() {
-                            const progress = profilesFound.length > 0 
-                              ? Math.min(Math.round((profilesProcessed / Math.min(profilesFound.length, maxProfiles)) * 100), 100)
-                              : 0;
-                            
-                            progressBarFill.style.width = progress + '%';
-                            progressBarFill.textContent = progress + '%';
-                          }
+
                         // Función para crear sección de Experiencia con estilo LinkedIn
                         function createExperienceSection(experiences) {
                           const experienceSection = document.createElement('div');
