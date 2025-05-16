@@ -5,17 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // Elementos UI generales
   const statusDiv = document.getElementById('status');
   
-  // Variables de estado para la búsqueda automática
-  let profilesFound = [];
-  let profilesProcessed = 0;
-  let maxProfiles = 10;
-  let shouldStop = false;
-  
-  // Variables para la integración con n8n
-  let n8nWebhookUrl = '';
-  let currentProfileData = null;
-  let autoSendToSheets = false;
-  
   
   // EXTRACCIÓN MANUAL DE PERFIL ACTUAL
   if (scrapeBtn) {
@@ -60,74 +49,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Escuchar mensajes del background script
   chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    
+    // Removed automated search message handlers: "profilesFound", "profileProcessed", "searchComplete", "searchError"
+    // Keep if any other relevant messages are handled, otherwise this listener might be removable if only used for automated search.
+    // For now, keeping it minimal, assuming no other messages are critical for manual scrape.
+    // If sendToSupabase or other manual actions rely on messages *from* background *to* popup (other than initial response), review.
+    // Based on current analysis, this listener is primarily for automated search updates.
+    // Let's comment it out for now, can be reinstated if essential parts of manual flow break.
+    /*
     if (message.action === "profilesFound") {
-      profilesFound = message.profiles;
-      updateProgressBar();
-      statusDiv.textContent = `Encontrados ${profilesFound.length} perfiles. Iniciando extracción...`;
-      
-      // Actualizar el estado de la búsqueda
-      chrome.storage.local.get(['searchInProgress'], function(result) {
-        if (result.searchInProgress) {
-          result.searchInProgress.profilesFound = profilesFound;
-          chrome.storage.local.set({searchInProgress: result.searchInProgress});
-        }
-      });
+      // ...
     }
     else if (message.action === "profileProcessed") {
-      profilesProcessed++;
-      updateProgressBar();
-      
-      if (message.profileData && message.profileData.success) {
-        statusDiv.textContent = `Perfil extraído: ${message.profileData.data.name || 'Sin nombre'} (${profilesProcessed} de ${profilesFound.length})`;
-        saveProfile(message.profileData.data);
-        
-        // Si el auto-envío está activado, enviamos el perfil a n8n
-        if (autoSendToSheets && n8nWebhookUrl) {
-          setTimeout(() => {
-            sendProfileToEndpoint(message.profileData.data, false)
-              .then(() => console.log('Perfil enviado automáticamente a Google Sheets'))
-              .catch(err => console.error('Error al enviar automáticamente a Google Sheets:', err));
-          }, 1000);
-        }
-      } else {
-        statusDiv.textContent = `Error al extraer perfil #${profilesProcessed}. Continuando...`;
-      }
-      
-      // Actualizar el estado de la búsqueda
-      chrome.storage.local.get(['searchInProgress'], function(result) {
-        if (result.searchInProgress) {
-          result.searchInProgress.profilesProcessed = profilesProcessed;
-          chrome.storage.local.set({searchInProgress: result.searchInProgress});
-        }
-      });
-      
-      // Verificar si hemos terminado
-      if (profilesProcessed >= profilesFound.length || profilesProcessed >= maxProfiles || shouldStop) {
-        isSearching = false;
-        updateSearchUI(false);
-        statusDiv.textContent = `Búsqueda completada: ${profilesProcessed} perfiles extraídos.`;
-        
-        // Limpiar el estado de búsqueda en progreso
-        chrome.storage.local.remove(['searchInProgress']);
-      }
+      // ...
     }
     else if (message.action === "searchComplete") {
-      isSearching = false;
-      updateSearchUI(false);
-      statusDiv.textContent = `Búsqueda completada: ${profilesProcessed} perfiles extraídos.`;
-      
-      // Limpiar el estado de búsqueda en progreso
-      chrome.storage.local.remove(['searchInProgress']);
+      // ...
     }
     else if (message.action === "searchError") {
-      isSearching = false;
-      updateSearchUI(false);
-      statusDiv.textContent = `Error en la búsqueda: ${message.error}`;
-      
-      // Limpiar el estado de búsqueda en progreso
-      chrome.storage.local.remove(['searchInProgress']);
+      // ...
     }
+    */
   });
   
   // Función de extracción alternativa usando scripting.executeScript
@@ -655,230 +596,5 @@ document.addEventListener('DOMContentLoaded', function() {
                               }
                             });
                           }
-                          
 
-
-
-  
-// Función para enviar perfiles a Supabase
-function sendProfileToEndpoint(profileData, showStatus = true) {
-  return new Promise((resolve, reject) => {
-    const statusDiv = document.getElementById('status');
-    if (showStatus && statusDiv) {
-      statusDiv.textContent = 'Enviando datos a Supabase...';
-    }
-    
-    // Crear payload con la estructura correcta - SIN el campo 'profile' extra
-    let payload;
-    
-    if (!profileData || profileData.test) {
-      // Payload de prueba con estructura correcta
-      payload = {
-        linkedin_url: "https://linkedin.com/test-profile-verification",
-        name: "Test de Verificación",
-        title: "Prueba de Envío",
-        city: "Ciudad de Prueba",
-        summary: "Resumen de prueba para verificación de la conexión con Supabase",
-        experience: "Experiencia de prueba",
-        education: "Educación de prueba",
-        interests: "Intereses de prueba"
-      };
-    } else {
-      // Datos reales del perfil
-      payload = {
-        linkedin_url: profileData.profileUrl || '',
-        name: profileData.name || '',
-        title: profileData.headline || '',
-        city: profileData.location || '',
-        summary: profileData.about || 'Sin descripción disponible', // Valor por defecto para summary
-        experience: formatExperienceForEndpoint(profileData.experience),
-        education: formatEducationForEndpoint(profileData.education),
-        interests: formatInterestsForEndpoint(profileData.interests),
-        skills: formatSkillsForEndpoint(profileData.skills)
-      };
-    }
-    
-    console.log('Enviando datos a través del background script:', payload);
-    
-    // Enviar mensaje al background script
-    chrome.runtime.sendMessage({
-      action: "sendToSupabase",
-      url: "https://qiqxywhaggmjrbtvkanm.supabase.co/functions/v1/generate-embedding",
-      payload: payload
-    }, function(response) {
-      if (chrome.runtime.lastError) {
-        console.error('Error al enviar mensaje:', chrome.runtime.lastError);
-        if (showStatus && statusDiv) {
-          statusDiv.textContent = 'Error: ' + chrome.runtime.lastError.message;
-        }
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      
-      if (response && response.success) {
-        console.log('Respuesta exitosa:', response.data);
-        if (showStatus && statusDiv) {
-          statusDiv.textContent = '✅ Datos enviados exitosamente a Supabase!';
-        }
-        resolve(response.data);
-      } else {
-        console.error('Error en la respuesta:', response ? response.error : 'Sin respuesta');
-        if (showStatus && statusDiv) {
-          statusDiv.textContent = '❌ Error: ' + (response ? response.error : 'Sin respuesta del background');
-        }
-        reject(new Error(response ? response.error : 'Sin respuesta'));
-      }
-    });
-  });
-}
-// Modificación de la función sendProfileToSupabase en popup.js
-
-function sendProfileToSupabase(profileData) {
-  return new Promise((resolve, reject) => {
-    // Crear payload con la estructura correcta (sin el objeto 'profile')
-    const payload = {
-      linkedin_url: profileData.profileUrl || '',
-      name: profileData.name || '',
-      title: profileData.headline || '',
-      city: profileData.location || '',
-      summary: profileData.about || 'Sin descripción disponible',
-      experience: formatExperienceForEndpoint(profileData.experience),
-      education: formatEducationForEndpoint(profileData.education),
-      interests: formatInterestsForEndpoint(profileData.interests)
-    };
-    
-    // Generar un identificador único basado en la URL de LinkedIn
-    const profileId = payload.linkedin_url.replace(/https?:\/\/(www\.)?linkedin\.com\/in\//g, '').replace(/\//g, '');
-    
-    // Verificar si ya se ha enviado recientemente este perfil
-    chrome.storage.local.get(['sentProfiles'], function(result) {
-      const sentProfiles = result.sentProfiles || {};
-      const now = Date.now();
-      const lastSentTime = sentProfiles[profileId];
-      
-      // Verificar si se envió en los últimos 5 minutos
-      if (lastSentTime && (now - lastSentTime < 5 * 60 * 1000)) {
-        console.log('Este perfil ya fue enviado recientemente. Evitando duplicado:', profileId);
-        statusDiv.textContent = '⚠️ Este perfil ya se envió recientemente. Esperando 5 minutos para enviar de nuevo.';
-        resolve({ success: true, message: 'Perfil ya enviado recientemente' });
-        return;
-      }
-      
-      // Verificar si tiene URL de LinkedIn válida
-      if (!payload.linkedin_url || !payload.linkedin_url.includes('linkedin.com/in/')) {
-        statusDiv.textContent = '❌ URL de LinkedIn inválida';
-        reject(new Error('URL de LinkedIn inválida'));
-        return;
-      }
-      
-      console.log('Enviando datos directamente a Supabase:', payload);
-      
-      // Enviar mensaje al background script
-      chrome.runtime.sendMessage({
-        action: "sendToSupabase",
-        url: "https://qiqxywhaggmjrbtvkanm.supabase.co/functions/v1/generate-embedding",
-        payload: payload
-      }, function(response) {
-        if (chrome.runtime.lastError) {
-          console.error('Error al enviar mensaje:', chrome.runtime.lastError);
-          reject(chrome.runtime.lastError);
-          return;
-        }
-        
-        if (response && response.success) {
-          console.log('Respuesta exitosa:', response.data);
-          
-          // Registrar como enviado recientemente
-          sentProfiles[profileId] = now;
-          chrome.storage.local.set({ sentProfiles: sentProfiles });
-          
-          // Mostrar mensaje de éxito
-          statusDiv.textContent = '✅ Datos enviados exitosamente a Supabase!';
-          resolve(response.data);
-        } else {
-          console.error('Error en la respuesta:', response ? response.error : 'Sin respuesta');
-          statusDiv.textContent = '❌ Error: ' + (response ? response.error : 'Sin respuesta');
-          reject(new Error(response ? response.error : 'Sin respuesta'));
-        }
-      });
-    });
-  });
-}
-
-// Funciones auxiliares para formatear datos
-function formatExperienceForEndpoint(experience) {
-  if (!experience || !Array.isArray(experience)) return '';
-  
-  return experience.map(job => {
-    // Asegurarse de que cada campo existe antes de usarlo
-    const title = job.title || '';
-    const company = job.company || '';
-    const duration = job.duration || job.dateRange || '';
-    const location = job.location || '';
-    const workModality = job.workModality ? ` - Modalidad: ${job.workModality}` : '';
-    
-    return `${title} en ${company} · ${duration} ${location}${workModality}`;
-  }).join(' ENTERPRISE BUSINESS SOLUTIONS - EBS · ');
-}
-
-function formatEducationForEndpoint(education) {
-  if (!education || !Array.isArray(education)) return '';
-  
-  return education.map(edu => {
-    // Asegurarse de que cada campo existe antes de usarlo
-    const institution = edu.institution || '';
-    const degree = edu.degree || '';
-    const dateRange = edu.dateRange || '';
-    
-    return `${degree} en ${institution} (${dateRange})`;
-  }).join('; ');
-}
-
-function formatInterestsForEndpoint(interests) {
-  if (!interests) return '';
-  
-  // Si es un objeto estructurado (formato nuevo)
-  if (typeof interests === 'object' && !Array.isArray(interests)) {
-    const parts = [];
-    
-    // Extraer cada tipo de interés
-    if (interests.companies && Array.isArray(interests.companies)) {
-      const companyNames = interests.companies.map(c => c.name).join(', ');
-      if (companyNames) parts.push('Empresas: ' + companyNames);
-    }
-    
-    if (interests.people && Array.isArray(interests.people)) {
-      const peopleNames = interests.people.map(p => p.name).join(', ');
-      if (peopleNames) parts.push('Personas: ' + peopleNames);
-    }
-    
-    if (interests.schools && Array.isArray(interests.schools)) {
-      const schoolNames = interests.schools.map(s => s.name).join(', ');
-      if (schoolNames) parts.push('Instituciones: ' + schoolNames);
-    }
-    
-    if (interests.newsletters && Array.isArray(interests.newsletters)) {
-      const newsletterNames = interests.newsletters.map(n => n.name).join(', ');
-      if (newsletterNames) parts.push('Newsletters: ' + newsletterNames);
-    }
-    
-    return parts.join(' | ');
-  }
-  
-  return '';
-}
-
-function formatSkillsForEndpoint(skills) {
-  if (!skills) return '';
-  
-  if (Array.isArray(skills)) {
-    return skills.map(skill => {
-      // Puede ser un string o un objeto con propiedad name
-      return typeof skill === 'string' ? skill : (skill.name || '');
-    }).filter(name => name).join(', ');
-  }
-  
-  return '';
-}
-//-------------------------------------------------------------------------------------------------------------//
 });

@@ -11,7 +11,7 @@ const MIN_DELAY_BETWEEN_ACTIONS = 2000; // 2 segundos mínimo entre acciones
 chrome.runtime.onInstalled.addListener(function() {
   console.log('LinkedIn Profile Scraper Local instalado correctamente');
   
-  // Inicializar almacenamiento
+  // Inicializar almacenamiento para perfiles guardados (puede ser útil para manual también)
   chrome.storage.local.get(['profiles'], function(result) {
     if (!result.profiles) {
       chrome.storage.local.set({profiles: []});
@@ -44,11 +44,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === "sendToSupabase") {
     console.log('Background: Recibida solicitud para enviar a Supabase', request);
     
-    // URL y token
     const supabaseUrl = request.url || 'https://qiqxywhaggmjrbtvkanm.supabase.co/functions/v1/generate-embedding';
-    const supabaseToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFpcXh5d2hhZ2dtanJidHZrYW5tIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDY1OTYwMywiZXhwIjoyMDYwMjM1NjAzfQ.VFY-werwsPl7QVJJBWqwuELQZFND5uWEY70MJ5D_WeY';
+    // const supabaseToken = '...'; // Token is hardcoded in fetch
     
-    // Validar que el payload tenga una estructura correcta y que exista el campo obligatorio summary
     if (!request.payload) {
       console.error('Background: Payload incorrecto');
       sendResponse({ 
@@ -58,7 +56,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       return true;
     }
     
-    // Verificar si existe el campo summary
     if (!request.payload.summary) {
       console.warn('Background: Campo summary faltante, agregando valor por defecto');
       request.payload.summary = "Sin información de resumen disponible";
@@ -66,7 +63,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     
     console.log('Background: Enviando payload a Supabase:', JSON.stringify(request.payload, null, 2));
     
-    // Realizar solicitud a Supabase desde el background script
     fetch(supabaseUrl, {
       method: 'POST',
       headers: {
@@ -78,34 +74,30 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     })
     .then(response => {
       console.log('Background: Status de respuesta:', response.status);
-      return response.text();
+      return response.text(); // Changed to text() to handle various response types
     })
     .then(data => {
       console.log('Background: Respuesta recibida:', data);
-      
       try {
-        // Intentar parsear como JSON
         const jsonData = JSON.parse(data);
         if (jsonData.error || (jsonData.code && jsonData.code >= 400)) {
-          // Si hay un código de error
           console.error('Background: Error en respuesta JSON:', jsonData);
           sendResponse({ 
             success: false, 
             error: jsonData.error || jsonData.message || 'Error de servidor' 
           });
         } else {
-          // Si es exitoso
           console.log('Background: Respuesta exitosa:', jsonData);
-          sendResponse({ success: true, data: data });
+          sendResponse({ success: true, data: jsonData }); // Send parsed JSON data
         }
       } catch (e) {
-        // Si no es JSON válido pero no hay error (posible respuesta sin contenido)
-        if (data === '' || data.trim() === '') {
-          console.log('Background: Respuesta vacía, asumiendo éxito');
-          sendResponse({ success: true, data: 'OK' });
+        // Handle non-JSON success responses (e.g., empty or simple string)
+        if (data.trim() === '' || response.ok) { // Check response.ok for non-JSON success
+            console.log('Background: Respuesta no JSON pero exitosa (o vacía)');
+            sendResponse({ success: true, data: data || 'OK' });
         } else {
-          console.log('Background: Respuesta no es JSON válido:', data);
-          sendResponse({ success: false, error: 'Respuesta no válida del servidor' });
+            console.log('Background: Respuesta no es JSON válido y no fue exitosa:', data);
+            sendResponse({ success: false, error: 'Respuesta no válida del servidor' });
         }
       }
     })
@@ -116,10 +108,11 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     
     return true; // Indica que la respuesta se enviará de forma asíncrona
   }
+  // Removed: Listener for scrapeProfile related actions from background, if any, assuming directExtractProfile is called via scripting.executeScript
 });
 
 // Mensaje para confirmar que el background script está activo
-console.log('LinkedIn Profile Scraper: Background script cargado');
+console.log('LinkedIn Profile Scraper: Background script cargado (versión simplificada)');
 
 // Función principal para iniciar el proceso de búsqueda
 function startSearchProcess(searchUrl) {
@@ -305,31 +298,34 @@ async function processNextProfile() {
   });
 }
 
-// Extraer datos del perfil
+// Extraer datos del perfil (KEPT for potential use by popup.js via scripting.executeScript for fallback)
+// This function might be directly injected by popup.js, or called via a message if preferred.
+// For now, assuming it's kept here if popup.js's `extractWithFunction` injects code that calls a function defined in background.js context (less common for executeScript `function` type).
+// More likely, `directExtractProfile` is entirely self-contained within popup.js's `extractWithFunction`'s injected block.
+// Let's assume directExtractProfile in background.js is the one used by background.js itself if it were to do an extraction.
+// If popup.js's `extractWithFunction` directly injects its OWN version of directExtractProfile, then this one in background.js can be removed.
+// Given the current structure where popup.js has its own extensive directExtractProfile, the one in background.js is likely redundant or for a different flow.
+// For clarity and to ensure no breakage if there's a subtle call I missed: I'll keep directExtractProfile and its helpers here but note they might be dead code if popup.js handles all direct extraction.
+
 function extractProfileData(tabId) {
   chrome.scripting.executeScript({
     target: {tabId: tabId},
-    files: ['content.js']
+    files: ['content.js'] // This implies content.js is still used for primary extraction
   }, function() {
-    // Intentar primero con el content script
     chrome.tabs.sendMessage(tabId, {action: "scrapeProfile"}, function(response) {
       if (chrome.runtime.lastError || !response || !response.success) {
-        console.log("Fallback a método directo de extracción");
-        
-        // Si falla, intentar con el método directo
+        console.log("Fallback a método directo de extracción en background.js (si se llega aquí)");
         chrome.scripting.executeScript({
           target: {tabId: tabId},
-          function: directExtractProfile
+          function: directExtractProfile // This `directExtractProfile` is the one below in background.js
         }, handleExtractedData);
       } else {
-        // Content script funcionó correctamente
-        handleProfileData(response);
+        handleProfileData(response); // This implies background.js handles data after content.js extraction
       }
     });
   });
 }
 
-// Función de extracción directa para usar con executeScript
 function directExtractProfile() {
   try {
     function getName() {
@@ -340,7 +336,6 @@ function directExtractProfile() {
         'h1.text-heading-xlarge',
         'h1'
       ];
-      
       for (const selector of selectors) {
         const elements = document.querySelectorAll(selector);
         for (const element of elements) {
@@ -351,7 +346,6 @@ function directExtractProfile() {
       }
       return 'Nombre no encontrado';
     }
-    
     function getHeadline() {
       const selectors = [
         '.text-body-medium',
@@ -359,7 +353,6 @@ function directExtractProfile() {
         '.profile-topcard-person-entity__headline',
         'h2.mt1.t-18'
       ];
-      
       for (const selector of selectors) {
         const elements = document.querySelectorAll(selector);
         for (const element of elements) {
@@ -370,7 +363,6 @@ function directExtractProfile() {
       }
       return '';
     }
-    
     function getLocation() {
       const selectors = [
         '.text-body-small.inline.t-black--light.break-words',
@@ -379,12 +371,10 @@ function directExtractProfile() {
         '.pb2.pv-text-details__left-panel',
         'span.text-body-small.inline'
       ];
-      
       for (const selector of selectors) {
         const elements = document.querySelectorAll(selector);
         for (const element of elements) {
           if (element && element.textContent.trim()) {
-            // Asegurarse que es una ubicación real y no otro texto
             const text = element.textContent.trim();
             if (text.length < 100 && !text.includes("followers") && !text.includes("seguidores")) {
               return text;
@@ -392,12 +382,8 @@ function directExtractProfile() {
           }
         }
       }
-      
-      // Si no se encuentra ubicación, retornar string vacío en lugar de un valor predeterminado
       return '';
     }
-    
-    // Función básica para extraer acerca de, experiencia, educación, etc.
     function getBasicInfo(title) {
       const sections = Array.from(document.querySelectorAll('section'));
       for (const section of sections) {
@@ -408,9 +394,7 @@ function directExtractProfile() {
       }
       return '';
     }
-    
     const timestamp = new Date().toISOString();
-    
     const profileData = {
       name: getName(),
       headline: getHeadline(),
@@ -421,46 +405,46 @@ function directExtractProfile() {
       skills: getBasicInfo('Habilidades') || getBasicInfo('Skills'),
       profileUrl: window.location.href,
       extractionDate: timestamp,
-      source: 'direct_extraction'
+      source: 'direct_extraction_background_version'
     };
-    
     return {success: true, data: profileData};
   } catch (error) {
-    console.error("Error en extracción directa:", error);
+    console.error("Error en extracción directa (background.js):", error);
     return {success: false, message: error.toString()};
   }
 }
 
-// Manejar los datos extraídos del profile
 function handleExtractedData(results) {
   if (chrome.runtime.lastError) {
-    console.error("Error al ejecutar script:", chrome.runtime.lastError);
-    handleProfileData({success: false, message: chrome.runtime.lastError.message});
+    console.error("Error al ejecutar script (background.js):", chrome.runtime.lastError);
+    // This would message popup, but popup's listener is mostly removed.
+    // For a manual scrape, the popup initiates and should handle its own status.
+    // So, this might just log or do nothing further if not part of automated flow.
+    // chrome.runtime.sendMessage({ action: "profileProcessed", profileData: {success: false, message: chrome.runtime.lastError.message} });
     return;
   }
-  
   const result = results[0].result;
-  handleProfileData(result);
+  // chrome.runtime.sendMessage({ action: "profileProcessed", profileData: result });
+  console.log("Data extracted by background's direct method:", result);
 }
 
-// Procesar los datos del perfil y continuar con el siguiente
+// This function was for the automated flow, processing data and moving to next profile.
+// For manual scrape, popup.js handles its own data processing after extraction.
+// Commenting out as it seems tied to the automated loop.
+/*
 async function handleProfileData(profileData) {
-  // Notificar al popup sobre el perfil procesado
   chrome.runtime.sendMessage({
     action: "profileProcessed",
     profileData: profileData
   });
-  
-  // Incrementar el índice y procesar el siguiente perfil
   currentProfileIndex++;
-  
-  // Verificar si debemos continuar
   if (shouldStop || currentProfileIndex >= maxProfiles || currentProfileIndex >= profilesFound.length) {
     completeBusqueda("Proceso de perfiles completado");
   } else {
     await processNextProfile();
   }
 }
+*/
 
 // Finalizar el proceso de búsqueda
 function completeBusqueda(message) {
@@ -498,25 +482,12 @@ function handleSearchError(error) {
   chrome.storage.local.remove(['searchInProgress']);
 }
 
-// Utilidades
+// Utilidades (KEPT, as they might be used by remaining functions, e.g. directExtractProfile if it had delays)
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
-
 function getRandomDelay(min, max) {
   return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
-// Esta función asegura que no realizamos acciones demasiado rápido
-function ensureDelay() {
-  const now = Date.now();
-  const timeSinceLastAction = now - lastSearchTime;
-  
-  if (timeSinceLastAction < MIN_DELAY_BETWEEN_ACTIONS) {
-    const delayNeeded = MIN_DELAY_BETWEEN_ACTIONS - timeSinceLastAction;
-    return sleep(delayNeeded);
-  }
-  
-  lastSearchTime = now;
-  return Promise.resolve();
-}
+// Removed: ensureDelay (was for automated search pacing)

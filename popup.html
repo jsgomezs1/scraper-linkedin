@@ -38,7 +38,6 @@
       margin-bottom: 20px; /* More space below title */
     }
 
-    /* General Button Styling */
     button {
       background-color: var(--primary-color);
       color: var(--white-color);
@@ -69,145 +68,54 @@
       outline-offset: 2px;
     }
 
-
-    input[type="text"],
-    input[type="file"],
-    select {
-      width: 100%;
-      padding: 10px; /* Slightly more padding */
-      margin-bottom: 10px;
-      border: 1px solid var(--dark-gray);
-      border-radius: var(--border-radius);
-      box-sizing: border-box;
-      font-size: 0.95rem;
-      transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
-    }
-
-    input[type="text"]:focus,
-    input[type="file"]:focus,
-    select:focus {
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 0.2rem rgba(0, 119, 181, 0.25); /* Focus ring */
-      outline: none;
-    }
-
-    label {
+    label { /* Kept for potential use in profileData display */
       display: block;
-      margin-bottom: 6px; /* Adjusted spacing */
+      margin-bottom: 6px;
       font-weight: bold;
       color: var(--text-color);
       font-size: 0.9rem;
     }
 
-    .input-group {
-      margin-bottom: 15px; /* Increased spacing */
-    }
-
     .data-row {
-      margin-bottom: 10px; /* Increased spacing */
+      margin-bottom: 10px;
       padding-bottom: 8px;
-      border-bottom: 1px solid var(--medium-gray); /* Separator for rows */
+      border-bottom: 1px solid var(--medium-gray);
     }
     .data-row:last-child {
-        border-bottom: none; /* No border for the last item */
+        border-bottom: none;
     }
 
-    .data-row .label { /* More specific selector */
+    .data-row .label { 
       font-weight: bold;
-      color: var(--primary-color); /* Make labels stand out */
+      color: var(--primary-color);
       margin-right: 5px;
     }
 
-    .mode-badge {
-      display: inline-block;
-      background-color: var(--text-muted-color);
-      color: var(--white-color);
-      padding: 3px 8px; /* Adjusted padding */
-      border-radius: var(--border-radius);
-      font-size: 0.75rem; /* Smaller font */
-      margin-left: 10px;
-      vertical-align: middle; /* Align with text */
-    }
-
-    .tab-container {
-      margin-bottom: 20px;
+    .content-area {
+      padding: 15px;
       background-color: var(--white-color);
       border-radius: var(--border-radius);
       box-shadow: var(--box-shadow);
+      margin-bottom: 15px;
     }
 
-    .tab {
-      overflow: hidden;
-      border-bottom: 1px solid var(--dark-gray); /* Border only at the bottom of the tab bar */
-      background-color: var(--light-gray); /* Light background for tab bar */
-      border-radius: var(--border-radius) var(--border-radius) 0 0; /* Rounded top corners */
-      display: flex; /* Use flexbox for even distribution */
-    }
-
-    .tab button {
-      background-color: transparent; /* Inherit by default */
-      float: none; /* Remove float */
-      flex-grow: 1; /* Distribute space evenly */
-      border: none;
-      outline: none;
-      cursor: pointer;
-      padding: 12px 16px; /* Consistent padding */
-      transition: background-color var(--transition-speed), color var(--transition-speed);
-      width: auto; /* Override general button width */
-      margin: 0;
-      border-radius: 0; /* Tabs shouldn't be individually rounded like action buttons */
-      color: var(--text-muted-color);
-      font-size: 0.9rem;
-      box-shadow: none; /* No shadow for tab buttons */
-      border-bottom: 3px solid transparent; /* For active indicator */
-    }
-
-    .tab button:hover {
-      background-color: var(--medium-gray);
-      color: var(--primary-color);
-    }
-
-    .tab button.active {
-      background-color: transparent; /* Keep tab content background */
-      color: var(--primary-color);
-      font-weight: bold;
-      border-bottom: 3px solid var(--primary-color); /* Active indicator line */
-    }
-
-    .tabcontent {
-      display: none;
-      padding: 20px; /* More padding in content area */
-      border: none; /* Remove border, as tab-container has shadow */
-      border-top: none;
-      border-radius: 0 0 var(--border-radius) var(--border-radius); /* Rounded bottom corners */
-      background-color: var(--white-color);
+    #status {
+        padding: 10px;
+        margin-top: 10px;
+        border-radius: var(--border-radius);
+        background-color: var(--medium-gray);
+        text-align: center;
+        font-size: 0.9rem;
+        min-height: 1.2em; /* Ensure space even when empty */
     }
 
     footer {
       margin-top: 25px;
-      font-size: 0.8rem; /* Slightly smaller */
+      font-size: 0.8rem;
       color: #999;
       text-align: center;
       border-top: 1px solid var(--medium-gray);
       padding-top: 15px;
-    }
-
-    .info-text {
-      font-size: 0.85rem; /* Slightly smaller */
-      color: var(--text-muted-color);
-      margin-top: 10px;
-      margin-bottom: 15px; /* Add some bottom margin */
-    }
-
-    .settings-section {
-      border-top: 1px solid var(--medium-gray);
-      margin-top: 20px;
-      padding-top: 20px;
-    }
-
-    /* Utility for hidden elements */
-    .hidden {
-        display: none;
     }
   </style>
 </head>
@@ -215,18 +123,22 @@
 
   <h2>LinkedIn Profile Scraper</h2>
 
-  <div class="tab-container">
-    <div id="manualTab" class="tabcontent" style="display: block;">
-      <button id="scrapeBtn">Extract Current Profile</button>
-      <button id="sendToSheetsBtn">Send to Database</button> 
-      <div id="profileData">
-          </div>
+  <div class="content-area">
+    <button id="scrapeBtn">Extract Current Profile</button>
+    <!-- The sendToSheetsBtn is now dynamically added by displayProfileData in popup.js, 
+         or the old one can be kept if preferred. For simplicity, relying on dynamic one for now. 
+         If the static button is needed, ensure its ID matches what popup.js expects. -->
+    <!-- <button id="sendToSheetsBtn">Send to Database</button> --> 
+    <div id="profileData">
+        <!-- Profile data will be shown here by popup.js -->
     </div>
+  </div>
 
-    </div>
+  <div id="status"></div>
 
-  <input type="file" id="restoreFile" accept=".json" class="hidden">
-
+  <footer>
+    Simplified Scraper UI
+  </footer>
 
   <script src="popup.js"></script>
 </body>
